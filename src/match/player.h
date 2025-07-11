@@ -26,6 +26,8 @@ public:
   void AddUnit(Vector2I position, UnitType unit_type, const UnitManager& unit_manager);
   void SetSelectedUnit(std::shared_ptr<Unit> unit, const std::unique_ptr<Map>& map = nullptr);
   const std::shared_ptr<Unit>& GetSelectedUnit() const { return selected_unit_; }
+  Vector2I GetSelectedTilePosition() const { return selected_tile_position_; }
+  RRectangle GetTileArea(Vector2I position) const;
   void ClearSelectedTile();
   void ClearActionTile();
 

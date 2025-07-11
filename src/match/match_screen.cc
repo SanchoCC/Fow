@@ -24,6 +24,7 @@
 #include "../drawable/text.h"
 #include "../drawable/texture_manager.h"
 #include "../structs/vector2i.h"
+
 #include "match.h"
 #include "player.h"
 #include "targets/units/unit.h"
@@ -121,6 +122,7 @@ void MatchScreen::Update() {
 
   camera_ = player.GetCamera();
   PlacePlayerButtons(player);
+  UpdateTileInfoWindow(player);
 
   if (auto& unit = player.GetSelectedUnit(); unit) {
     ShowSelectedUnitHud(unit, match_->GetUnitManager());
@@ -333,6 +335,45 @@ void MatchScreen::PlacePossibleTiles(Player& player) {
   for (auto& drawable : draw_later) {
     PlaceDrawable(drawable);
   }
+}
+
+void MatchScreen::UpdateTileInfoWindow(Player& player) {
+    Vector2I selected = player.GetSelectedTilePosition();
+
+    if (selected != last_selected_tile_) {
+        tile_info_window_.reset();
+
+        if (selected.x >= 0 && selected.y >= 0) {
+            const auto& map = match_->GetMap();
+            const auto& tiles = map->GetTiles();
+            auto terrain = tiles[selected.x][selected.y].GetTerrain();
+            TerrainModifiers mods = terrain->GetModifiers();
+            std::string info = map->GetTerrainManager().GetName(terrain->GetType());
+
+            info += "\nAttack bonus: " + std::format("{:+.0f}%", mods.attack_bonus * 100);
+            info += "\nDefense bonus: " + std::format("{:+.0f}%", mods.defense_bonus * 100);
+            info += "\nMovement cost: " + std::format("{:.1f}", mods.movement_cost);
+
+            RRectangle area = player.GetTileArea(selected);
+            RVector2 center = area.GetPosition() + area.GetSize() / 2.f;
+            RVector2 screen_center = camera_->GetWorldToScreen(center);
+            RVector2 size = { 220.f, 120.f };
+            RVector2 pos = screen_center + size / 12.f;
+            tile_info_window_ = std::make_unique<Window>(pos, size, RText(info, 20.f));
+        }
+
+        last_selected_tile_ = selected;
+    }
+
+    if (tile_info_window_) {
+        auto& drawables = tile_info_window_->GetDrawables();
+        for (auto& drawable : drawables) {
+            PlaceDrawable(drawable, true);
+        }
+        if (tile_info_window_->ShouldClose()) {
+            tile_info_window_.reset();
+        }
+    }
 }
 
 void MatchScreen::ShowSelectedUnitHud(const std::shared_ptr<Unit>& unit, const UnitManager& unit_manager) {

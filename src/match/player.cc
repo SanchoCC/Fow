@@ -448,6 +448,10 @@ void Player::ResetUnitsMovementPoints() {
   }
 }
 
+RRectangle Player::GetTileArea(Vector2I position) const {
+    return render_map_[position.x][position.y]->GetArea();
+}
+
 void Player::UpdatePossibleTiles(const std::unique_ptr<Map>& map) {
   ClearPossibleTiles();
 
