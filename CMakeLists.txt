@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project(Fow)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -104,6 +104,8 @@ src/structs/vector2i.h
 
 src/utils/math_utils.h
 src/utils/set_operations.h
+src/utils/astar.h
+src/utils/astar.cpp
 
 )
 

@@ -31,7 +31,7 @@ std::unique_ptr<RWindow> Core::InitWindow(int width, int height, bool fullscreen
   if (fullscreen) {
     int display = GetCurrentMonitor();
     window->SetSize(GetMonitorWidth(display), GetMonitorHeight(display));
-    window->SetFullscreen(fullscreen);
+    //window->SetFullscreen(fullscreen);
   }
   window->SetExitKey(KEY_NULL);
   window->SetTargetFPS(60);

@@ -10,6 +10,7 @@
 
 #include "../../structs/vector2i.h"
 #include "terrain.h"
+#include "../../utils/astar.h"
 
 namespace fow {
 
@@ -79,6 +80,12 @@ std::unordered_set<Vector2I> Map::GetNeighbors(Vector2I position, bool itself) c
   return neighbors;
 }
 
+Vector2I Map::GetBounds() const {
+    int width = static_cast<int>(tiles_.size());
+    int height = static_cast<int>(tiles_[0].size());
+    return { width, height };
+}
+
 void Map::InitSize(int rows, int columns) {
   tiles_.resize(columns);
   for (int i = 0; i < columns; ++i) {
@@ -105,7 +112,9 @@ void Map::InitTerrainCompatibility() {
     {TerrainType::kMarsh, {}},
     {TerrainType::kForest, {}},
     {TerrainType::kWater, {}},
-    {TerrainType::kUrban, {}}
+    {TerrainType::kUrban, {}},
+    {TerrainType::kRoad, {}},
+    {TerrainType::kBridge, {}}
   };
 
   terrain_compatibility[TerrainType::kPlains] = {
@@ -176,6 +185,14 @@ void Map::InitTerrainCompatibility() {
     {TerrainType::kForest, 0.0},
     {TerrainType::kWater, 0.3}
   };
+
+  terrain_compatibility[TerrainType::kRoad] = {
+    {TerrainType::kRoad, 1.0}
+  };
+
+  terrain_compatibility[TerrainType::kBridge] = {
+  {TerrainType::kBridge, 1.0}
+  };
 }
 
 double Map::GetCompatibility(TerrainType a, TerrainType b) const {
@@ -185,6 +202,122 @@ double Map::GetCompatibility(TerrainType a, TerrainType b) const {
     }
   }
   return 0.0;
+}
+
+void Map::SetTileFromType(Vector2I pos, TerrainType type) {
+    int width = static_cast<int>(tiles_.size());
+    int height = static_cast<int>(tiles_[0].size());
+    if (pos.x < 0 || pos.x >= width || pos.y < 0 || pos.y >= height) {
+        return;
+    }
+    tiles_[pos.x][pos.y].SetTerrain(terrain_manager_.GetResource(type));
+}
+
+std::vector<std::vector<Vector2I>> Map::FindClusters(TerrainType type) const {
+  int columns = tiles_.size();
+  int rows = tiles_[0].size();
+  std::vector<std::vector<bool>> visited(columns, std::vector<bool>(rows, false));
+  std::vector<std::vector<Vector2I>> clusters;
+
+  for (int x = 0; x < columns; ++x) {
+    for (int y = 0; y < rows; ++y) {
+      if (visited[x][y]) continue;
+      if (tiles_[x][y].GetTerrain()->GetType() != type) continue;
+
+      std::vector<Vector2I> cluster;
+      std::queue<Vector2I> q;
+      q.push({x, y});
+      visited[x][y] = true;
+
+      while (!q.empty()) {
+        Vector2I cur = q.front();
+        q.pop();
+        cluster.push_back(cur);
+
+        for (const auto& nb : GetNeighbors(cur)) {
+          if (!visited[nb.x][nb.y] && tiles_[nb.x][nb.y].GetTerrain()->GetType() == type) {
+            visited[nb.x][nb.y] = true;
+            q.push(nb);
+          }
+        }
+      }
+
+      clusters.push_back(cluster);
+    }
+  }
+
+  return clusters;
+}
+
+void Map::GenerateRoads(int max_distance, double chance) {
+    auto clusters = FindClusters(TerrainType::kUrban);
+    if (clusters.size() < 2) return;
+
+    auto water_clusters = FindClusters(TerrainType::kWater);
+    std::unordered_set<Vector2I> blocked;
+    for (const auto& cluster : water_clusters) {
+        if (cluster.size() > 1) {
+            blocked.insert(cluster.begin(), cluster.end());
+        }
+    }
+
+    std::vector<Vector2I> centers;
+    centers.reserve(clusters.size());
+    for (const auto& cluster : clusters) {
+        int sx = 0, sy = 0;
+        for (const auto& t : cluster) {
+            sx += t.x;
+            sy += t.y;
+        }
+        centers.push_back({ sx / static_cast<int>(cluster.size()),
+                           sy / static_cast<int>(cluster.size()) });
+    }
+
+    AStar astar;
+    int width = static_cast<int>(tiles_.size());
+    int height = static_cast<int>(tiles_[0].size());
+
+    std::mt19937 gen(std::random_device{}());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    std::vector<int> connections(centers.size(), 0);
+
+    const int kMaxConnections = 1;
+    for (size_t i = 0; i < centers.size(); ++i) {
+        for (size_t j = i + 1; j < centers.size(); ++j) {
+            if (connections[i] >= kMaxConnections ||
+                connections[j] >= kMaxConnections) {
+                continue;
+            }
+
+            int dx = centers[i].x - centers[j].x;
+            int dy = centers[i].y - centers[j].y;
+            int dist_sq = dx * dx + dy * dy;
+            if (dist_sq > max_distance * max_distance || dist(gen) > chance)
+                continue;
+
+            AStar::Node start;
+            start.pos = centers[i];
+            auto path = astar.FindPathAStar(start, centers[j], *this, blocked);
+
+            for (const auto& p : path) {
+                if (p.x < 0 || p.x >= width || p.y < 0 || p.y >= height) {
+                    continue;
+                }
+                TerrainType current = tiles_[p.x][p.y].GetTerrain()->GetType();
+                if (current != TerrainType::kUrban) {
+                    if (current == TerrainType::kWater) {
+                        SetTileFromType(p, TerrainType::kBridge);
+                    }
+                    else if (current != TerrainType::kUrban) {
+                        SetTileFromType(p, TerrainType::kRoad);
+                    }
+                }
+            }
+
+            ++connections[i];
+            ++connections[j];
+        }
+    }
 }
 
 void Map::RandomFillMap(TerrainDistribution distribution, std::mt19937 gen) {

@@ -13,7 +13,9 @@ enum class TerrainType {
   kMarsh,
   kForest,
   kWater,
-  kUrban
+  kUrban,
+  kRoad,
+  kBridge
 };
 
 struct TerrainModifiers {
