@@ -1,10 +1,10 @@
 #include "core.h"
 
-#include <memory>
-#include <type_traits>
+#include <raylib.h>
 
 #include <Window.hpp>
-#include <raylib.h>
+#include <memory>
+#include <utility>
 
 #include "screen/screen.h"
 #include "screen/screen_controller.h"
@@ -16,10 +16,10 @@ Core& Core::Get() {
 }
 
 void Core::Start() {
-  // Initialization 
+  // Initialization
   SetTraceLogLevel(log_level_);
 
-  std::unique_ptr<RWindow> window = InitWindow(1600, 900, true);
+  std::unique_ptr<RWindow> window = InitWindow(1600, 900, false);
   screen_controller_ = std::make_unique<ScreenController>(ScreenType::kMenu, std::move(window));
   // Main cycle
   screen_controller_->ProcessScreen();
@@ -31,7 +31,7 @@ std::unique_ptr<RWindow> Core::InitWindow(int width, int height, bool fullscreen
   if (fullscreen) {
     int display = GetCurrentMonitor();
     window->SetSize(GetMonitorWidth(display), GetMonitorHeight(display));
-    //window->SetFullscreen(fullscreen);
+    window->SetFullscreen(fullscreen);
   }
   window->SetExitKey(KEY_NULL);
   window->SetTargetFPS(60);
@@ -39,4 +39,4 @@ std::unique_ptr<RWindow> Core::InitWindow(int width, int height, bool fullscreen
   return window;
 }
 
-} // namespace fow
+}  // namespace fow

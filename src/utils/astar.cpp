@@ -1,5 +1,3 @@
 #include "astar.h"
 
-namespace fow {
-	
-}
+namespace fow {}

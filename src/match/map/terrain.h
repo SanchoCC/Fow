@@ -28,21 +28,23 @@ struct TerrainModifiers {
 };
 
 class Terrain {
-public:
+ public:
   Terrain(TerrainType terrain_type);
 
   TerrainType GetType() const { return terrain_type_; }
   TerrainModifiers GetModifiers() const { return terrain_modifiers_; }
-private:
+
+ private:
   TerrainType terrain_type_;
   TerrainModifiers terrain_modifiers_;
 };
 
 class TerrainManager : public TextureManager<TerrainType, Terrain> {
-public:
+ public:
   std::string GetName(TerrainType terrain_type) const override;
-private:
+
+ private:
   std::string GetTextureName(TerrainType terrain_type) const override;
 };
 
-} // namespace fow
+}  // namespace fow

@@ -22,7 +22,7 @@ struct TerrainDistribution {
 };
 
 class Map {
-public:
+ public:
   Map(int rows, int columns, TerrainDistribution distribution, int k_cluster);
 
   std::vector<std::vector<Tile>> GetTiles() const { return tiles_; }
@@ -33,7 +33,8 @@ public:
 
   void SetTileFromType(Vector2I position, TerrainType type);
   void GenerateRoads(int max_distance, double chance);
-private:
+
+ private:
   void InitSize(int rows, int columns);
   void InitTerrainCompatibility();
   void InitTiles(TerrainDistribution distribution, int k);
@@ -53,4 +54,4 @@ private:
   std::unordered_map<TerrainType, std::unordered_map<TerrainType, double>> terrain_compatibility;
 };
 
-} // namespace fow
+}  // namespace fow
